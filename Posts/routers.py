@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List
 
+import aioredis
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -87,8 +88,8 @@ def update_post(post_id: int, request: PostUpdate, db: Session = Depends(get_db)
 
 
 @router.post('/{post_id}/like', response_model=PostOut)
-def like_post(post_id: int, dislike: bool = False, db: Session = Depends(get_db),
-              current_user: User = Depends(get_current_user)):
+async def like_post(post_id: int, dislike: bool = False, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter_by(id=post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -101,12 +102,23 @@ def like_post(post_id: int, dislike: bool = False, db: Session = Depends(get_db)
     db.add(new_like)
     db.commit()
     db.refresh(post)
+
+    # Redis cache functionality
+    redis = aioredis.from_url("redis://localhost")
+    try:
+        if dislike:
+            await redis.sadd(f"{post_id}_dislikes", current_user.id)
+        else:
+            await redis.sadd(f"{post_id}_likes", current_user.id)
+    except aioredis.RedisError as e:
+        raise HTTPException(status_code=500, detail={"Redis error": str(e)})
+
     return post
 
 
 @router.delete('/{post_id}/like', response_model=PostOut)
-def unlike_post(post_id: int, db: Session = Depends(get_db),
-                current_user: User = Depends(get_current_user)):
+async def unlike_post(post_id: int, db: Session = Depends(get_db),
+                      current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter_by(id=post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -118,17 +130,28 @@ def unlike_post(post_id: int, db: Session = Depends(get_db),
     db.delete(like)
     db.commit()
     db.refresh(post)
+
+    # Redis cache functionality
+    redis = aioredis.from_url("redis://localhost")
+    try:
+        if like.dislike:
+            await redis.srem(f"{post_id}_dislikes", current_user.id)
+        else:
+            await redis.srem(f"{post_id}_likes", current_user.id)
+    except aioredis.RedisError as e:
+        raise HTTPException(status_code=500, detail={"Redis error": str(e)})
+
     return post
 
 
 @router.get('/{post_id}/likes')
-def get_post_likes(post_id: int, db: Session = Depends(get_db),
-                current_user: User = Depends(get_current_user)):
-    post = db.query(Post).filter_by(id=post_id).first()
-    if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
-    post_likes = db.query(Like).filter_by(post_id=post_id).all()
-    if post_likes:
-        return post_likes
-    else:
-        return {"detail": "Post has no likes or dislikes yet"}
+async def get_post_likes(post_id: int, current_user: User = Depends(get_current_user)):
+    """ Redis cache likes/dislikes retrieving functionality """
+    try:
+        redis = aioredis.from_url("redis://localhost")
+        likes = await redis.smembers(f"{post_id}_likes")
+        dislikes = await redis.smembers(f"{post_id}_dislikes")
+        return {"likes": [int(user_id) for user_id in likes],
+                "dislikes": [int(user_id) for user_id in dislikes]}
+    except aioredis.RedisError as e:
+        raise HTTPException(status_code=500, detail={"Redis error": str(e)})
