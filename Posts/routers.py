@@ -8,7 +8,7 @@ from database import get_db
 from Accounts.models import User
 from Accounts.authorization import get_current_user
 from Posts.schemas import PostIn, PostOut, PostUpdate
-from Posts.models import Post
+from Posts.models import Post, Like
 
 router = APIRouter(tags=["Posts"])
 
@@ -24,9 +24,7 @@ def get_all_posts(limit: int = Query(10, gt=0), offset: int = Query(0, ge=0),
 def get_user_posts(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     user_posts = db.query(Post).filter_by(author_id=current_user.id).all()
     if not user_posts:
-        raise HTTPException(
-            status_code=404, detail=f"You have no posts yet"
-        )
+        raise HTTPException(status_code=404, detail=f"You have no posts yet")
     return user_posts
 
 
@@ -35,7 +33,7 @@ def get_single_post(post_id: int, db: Session = Depends(get_db),
                     current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter_by(id=post_id).first()
     if not post:
-        raise HTTPException(status_code=404, detail='Post not found')
+        raise HTTPException(status_code=404, detail="Post not found")
     return post
 
 
@@ -62,7 +60,7 @@ def delete_post(post_id: int, db: Session = Depends(get_db),
                 current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter_by(id=post_id).first()
     if not post:
-        raise HTTPException(status_code=404, detail='Post not found')
+        raise HTTPException(status_code=404, detail="Post not found")
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail=f"You can only delete your own posts")
     db.delete(post)
@@ -74,7 +72,7 @@ def update_post(post_id: int, request: PostUpdate, db: Session = Depends(get_db)
                 current_user: User = Depends(get_current_user)):
     post = db.query(Post).filter_by(id=post_id).first()
     if not post:
-        raise HTTPException(status_code=404, detail='Post not found')
+        raise HTTPException(status_code=404, detail="Post not found")
     if post.author_id != current_user.id:
         raise HTTPException(status_code=403, detail=f"You can only update your own posts")
 
@@ -86,3 +84,51 @@ def update_post(post_id: int, request: PostUpdate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(post)
     return post
+
+
+@router.post('/{post_id}/like', response_model=PostOut)
+def like_post(post_id: int, dislike: bool = False, db: Session = Depends(get_db),
+              current_user: User = Depends(get_current_user)):
+    post = db.query(Post).filter_by(id=post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.author_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot like/dislike own post")
+    like = db.query(Like).filter_by(user_id=current_user.id, post_id=post_id).first()
+    if like:
+        raise HTTPException(status_code=400, detail="Post already liked/disliked")
+    new_like = Like(user_id=current_user.id, post_id=post_id, dislike=dislike)
+    db.add(new_like)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+@router.delete('/{post_id}/like', response_model=PostOut)
+def unlike_post(post_id: int, db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
+    post = db.query(Post).filter_by(id=post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if post.author_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot unlike own post")
+    like = db.query(Like).filter_by(user_id=current_user.id, post_id=post_id).first()
+    if not like:
+        raise HTTPException(status_code=400, detail="Post not liked/disliked yet")
+    db.delete(like)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+@router.get('/{post_id}/likes')
+def get_post_likes(post_id: int, db: Session = Depends(get_db),
+                current_user: User = Depends(get_current_user)):
+    post = db.query(Post).filter_by(id=post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    post_likes = db.query(Like).filter_by(post_id=post_id).all()
+    if post_likes:
+        return post_likes
+    else:
+        return {"detail": "Post has no likes or dislikes yet"}

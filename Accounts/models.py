@@ -14,3 +14,4 @@ class User(Base):
     full_name = Column(String)
 
     posts = relationship("Post", back_populates="author")
+    likes = relationship("Like", backref="user")

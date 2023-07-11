@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -15,3 +15,13 @@ class Post(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     author = relationship("User", back_populates="posts")
+    likes = relationship("Like", backref="post")
+
+
+class Like(Base):
+    __tablename__ = "likes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    dislike = Column(Boolean, default=False)
