@@ -15,7 +15,7 @@ class Post(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     author = relationship("User", back_populates="posts")
-    likes = relationship("Like", backref="post")
+    likes = relationship("Like", backref="post", cascade="all, delete")
 
 
 class Like(Base):
