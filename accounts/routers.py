@@ -12,8 +12,8 @@ from accounts.externalapis import verify_email, enrich_email
 
 router = APIRouter(tags=["Users"])
 
-HUNTER_KEY = "e8731105dfbeb32b50948bb25f4bf832d9cf1b08"
-CLEARBIT_KEY = "sk_76c74f169b3ab6746933737eb9535c1e"
+HUNTER_KEY = ""
+CLEARBIT_KEY = ""
 
 
 @router.post("/signup", response_model=UserOut)
