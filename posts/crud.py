@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from posts.schemas import PostIn, PostUpdate
 from posts.models import Post, Like
@@ -19,6 +19,12 @@ def create_post(request: PostIn, user: User, db: Session):
     db.commit()
     db.refresh(new_post)
     return new_post
+
+
+def get_posts(limit: int, offset: int, db: Session):
+    """ Retrieves a certain number of all posts from the DB
+        (limit) with a certain offset from the first record """
+    return db.query(Post).offset(offset).limit(limit).all()
 
 
 def get_post_by_id(post_id: int, db: Session):
@@ -87,20 +93,47 @@ async def add_cache_like(redis, post_id: int, user_id: int, dislike: bool):
         await redis.sadd(f"{post_id}_likes", user_id)
 
 
+async def update_cache(redis, post_id: int, db: Session):
+    """ Our cache will have expiration time. When it gets emptied,
+        we'll need to re-fill it with likes from the DB. This update
+        will also be necessary for situations when Redis gets temporarily
+        unavailable for some reason. In this case, the cache gets re-filled. """
+
+    # We'll add the '-1' flag as a fake user ID to indicate that cache
+    # is now up-to-date and doesn't need refilling from the DB at this point
+    await redis.sadd(f"{post_id}_dislikes", -1)
+    await redis.sadd(f"{post_id}_likes", -1)
+
+    # Fetch likes and dislikes from the database, using prefetching
+    post = db.query(Post).filter_by(id=post_id).options(joinedload(Post.likes)).first()
+    if post:
+        likes = set(like.user_id for like in post.likes if not like.dislike)
+        dislikes = set(like.user_id for like in post.likes if like.dislike)
+        # Add likes and dislikes to the cache
+        for user_id in likes:
+            await add_cache_like(redis, post_id, user_id, dislike=False)
+        for user_id in dislikes:
+            await add_cache_like(redis, post_id, user_id, dislike=True)
+
+    # Set the cache expiration time (3 minutes in this case)
+    await redis.expire(f"{post_id}_likes", 180)
+    await redis.expire(f"{post_id}_dislikes", 180)
+
+
 async def get_cache_likes(redis, post_id: int):
     """ Retrieves post likes/dislikes user IDs sets by post id """
     likes = await redis.smembers(f"{post_id}_likes")
     dislikes = await redis.smembers(f"{post_id}_dislikes")
-    return {"likes": [int(user_id) for user_id in likes],
-            "dislikes": [int(user_id) for user_id in dislikes]}
+    return {"likes": set(int(user_id) for user_id in likes),
+            "dislikes": set(int(user_id) for user_id in dislikes)}
 
 
 async def check_cache_like(redis, post_id: int, user_id: int):
     """ Checks if the user's like already exists in the Redis cache """
     redis_likes = await redis.smembers(f"{post_id}_likes")
     redis_dislikes = await redis.smembers(f"{post_id}_dislikes")
-    likes = [int(user_id) for user_id in redis_likes]
-    dislikes = [int(user_id) for user_id in redis_dislikes]
+    likes = set(int(user_id) for user_id in redis_likes)
+    dislikes = set(int(user_id) for user_id in redis_dislikes)
     return user_id in likes or user_id in dislikes
 
 

@@ -16,7 +16,7 @@ async def verify_unique_email(email: str, db: Session):
 
 
 async def create_new_user(request: UserIn, db: Session):
-    """ Creates new user, with the provided credentials, in the DB """
+    """ Creates new user with the provided credentials in the DB """
     hashed_password = get_password_hash(request.password)
     new_user = User(
         username=request.username,
