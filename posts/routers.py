@@ -18,6 +18,12 @@ router = APIRouter(tags=["Posts"])
 REDIS = aioredis.from_url("redis://localhost")
 
 
+@router.post('/', status_code=201, response_model=PostOut)
+def create_new_post(request: PostIn, db: Session = Depends(get_db),
+                    current_user: User = Depends(get_current_user)):
+    return create_post(request, current_user, db)
+
+
 @router.get('/', response_model=List[PostOut])
 def get_all_posts(limit: int = Query(10, gt=0), offset: int = Query(0, ge=0),
                   db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -41,17 +47,13 @@ def get_single_post(post_id: int, db: Session = Depends(get_db),
     return post
 
 
-@router.post('/', status_code=201, response_model=PostOut)
-async def create_new_post(request: PostIn, db: Session = Depends(get_db),
-                    current_user: User = Depends(get_current_user)):
-    new_post = create_post(request, current_user, db)
-
-    # Redis cache functionality: set the '-1' flag to both likes and dislikes
-    # to indicate that our cache is now valid and up-to-date
-    await add_cache_like(REDIS, new_post.id, -1, False)
-    await add_cache_like(REDIS, new_post.id, -1, True)
-
-    return new_post
+@router.put('/{post_id}', response_model=PostOut)
+def update_user_post(post_id: int, request: PostUpdate, db: Session = Depends(get_db),
+                     current_user: User = Depends(get_current_user)):
+    user_post = get_own_post(post_id, current_user, db)
+    if user_post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+    return update_post(post_id, request, db)
 
 
 @router.delete('/{post_id}', status_code=204)
@@ -66,15 +68,6 @@ async def delete_post(post_id: int, db: Session = Depends(get_db),
 
     # Delete post from the DB (with its likes/dislikes)
     delete_existing_post(post_id, db)
-
-
-@router.put('/{post_id}', response_model=PostOut)
-def update_user_post(post_id: int, request: PostUpdate, db: Session = Depends(get_db),
-                     current_user: User = Depends(get_current_user)):
-    user_post = get_own_post(post_id, current_user, db)
-    if user_post is None:
-        raise HTTPException(status_code=404, detail="Post not found")
-    return update_post(post_id, request, db)
 
 
 @router.post('/{post_id}/like', response_model=PostOut)
@@ -92,10 +85,10 @@ async def like_post(post_id: int, dislike: bool = False, db: Session = Depends(g
     if existing_post.author_id == current_user.id:
         raise HTTPException(status_code=403, detail="Cannot like/dislike own post")
 
-    # Redis cache functionality: save like as a post_id/user_id pair
+    # Redis cache functionality: save like/dislike as a post_id/user_id pair
     await add_cache_like(REDIS, post_id, current_user.id, dislike)
 
-    # Create like in the DB
+    # Create like/dislike object in the DB
     create_like(post_id, dislike, current_user, db)
     return existing_post
 
@@ -129,6 +122,6 @@ async def get_post_likes(post_id: int, db: Session = Depends(get_db),
                          current_user: User = Depends(get_current_user)):
     # If cache is empty (due to lifetime expiration or some error),
     # it needs to get refilled from the DB
-    if check_cache_like(REDIS, post_id, -1) is False:
+    if await check_cache_like(REDIS, post_id, -1) is False:
         await update_cache(REDIS, post_id, db)
     return await get_cache_likes(REDIS, post_id)

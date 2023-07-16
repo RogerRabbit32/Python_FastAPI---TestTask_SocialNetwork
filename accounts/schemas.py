@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, EmailStr, validator
 
-
+# The following username and password requirements can be customized
 login_regex = r"^[a-zA-Z0-9]+$"
 password_regex = r"^(?=.*[A-Za-z])(?=.*\d)(?!.*\s).+$"
 
@@ -27,6 +27,7 @@ class UserIn(BaseModel):
 
 
 class UserOut(BaseModel):
+    id: int
     username: str
     email: EmailStr
     full_name: str | None = None
