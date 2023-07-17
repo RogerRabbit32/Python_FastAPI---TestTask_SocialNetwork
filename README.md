@@ -44,7 +44,7 @@ git clone https://github.com/RogerRabbit32/Python_FastAPI---TestTask_SocialNetwo
 cd SocialNetwork
 ```
 
-2. Inside the directory, create a <b>'.env'</b> file (this particular name is referenced in the docker-compose environment variable), where you have to specify two variables, storing your API keys:<p><code>HUNTER_API_KEY=#your secret key, no spaces around equal sign, no quotes, here<br>CLEARBIT_API_KEY=#your secret key, no spaces around equal sign, no quotes, here</code></p>These keys will grant the application access to hunter.io and clearbit.com services. Without them, user registration will not be available and the project will not work properly.<br>
+2. Inside the directory, create a <b>'.env'</b> file (this particular name is referenced in the docker-compose environment variable), where you have to specify two variables, storing your API keys:<p><code>HUNTER_API_KEY=#your secret key, no spaces around equal sign, no quotes, here</p><p>CLEARBIT_API_KEY=#your secret key, no spaces around equal sign, no quotes, here</code></p>These keys will grant the application access to hunter.io and clearbit.com services. Without them, user registration will not be available and the project will not work properly.<br>
 
 
 4. Build the Docker image. Run the command:
@@ -64,7 +64,7 @@ If the installation is successful, your app should be available at [http://local
 
 ## Usage
 
-All project API routes are available for tryouts via Swagger documentation [https://localhost:8000/docs](https://localhost:8000/docs)
+All project API routes are available for tryouts via Swagger documentation [http://localhost:8000/docs](http://localhost:8000/docs)
 
 
 <b>Register user</b>
