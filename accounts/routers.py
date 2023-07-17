@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -12,8 +14,8 @@ from accounts.externalapis import verify_email, enrich_email
 
 router = APIRouter(tags=["Users"])
 
-HUNTER_KEY = ""
-CLEARBIT_KEY = ""
+HUNTER_KEY = os.environ.get('HUNTER_API_KEY', '')
+CLEARBIT_KEY = os.environ.get('CLEARBIT_API_KEY', '')
 
 
 @router.post("/signup", response_model=UserOut)

@@ -15,7 +15,7 @@ from posts.crud import create_post, get_posts, get_post_by_id, get_own_post, get
 
 router = APIRouter(tags=["Posts"])
 
-REDIS = aioredis.from_url("redis://localhost")
+REDIS = aioredis.from_url("redis://redis")
 
 
 @router.post('/', status_code=201, response_model=PostOut)
