@@ -44,7 +44,7 @@ git clone https://github.com/RogerRabbit32/Python_FastAPI---TestTask_SocialNetwo
 cd SocialNetwork
 ```
 
-2. Inside the directory, create a <b>'.env'</b> file (this particular name is referenced in the docker-compose environment variable), where you have to specify two variables, storing your API keys:<p><br><code>HUNTER_API_KEY= CLEARBIT_API_KEY=</code></p><br>These keys will grant the application access to hunter.io and clearbit.com services. Without them, user registration will not be available and the project will not work properly.
+2. Inside the directory, create a <b>'.env'</b> file (this particular name is referenced in the docker-compose environment variable), where you have to specify two variables, storing your API keys:<p><br><code>HUNTER_API_KEY= CLEARBIT_API_KEY=</code></p><br>These keys will grant the application access to hunter.io and clearbit.com services. Without them, user registration will not be available and the project will not work properly.<br>
 
 
 4. Build the Docker image. Run the command:
@@ -66,7 +66,7 @@ If the installation is successful, your app should be available at [https://loca
 
 All project API routes are available for tryouts via Swagger documentation [https://localhost:8000/docs](https://localhost:8000/docs)
 
-<br>
+
 <b>Register user</b>
 
 Create a new user in the database with the specified login and password.
@@ -75,70 +75,70 @@ Route: `POST /accounts/signup`
 
 <i>NOTE! A valid email has to be provided at this stage, since all emails are verified through emailhunter.co If additional data is available on the user through clearbit.com email enrichment, the user's full name, if not provided by the user himself, will be automatically added to registration credentials.</i>
 
-<br>
+
 <b>Login user</b>
 
 Create a new JWT access token for the user. (Authentication also available via form data in Swagger docs)
 
 Route: `POST /accounts/login`
 
-<br>
+
 <b>Create Post</b>
 
 Create a new post with the specified title and text.
 
 Route: `POST /posts`
 
-<br>
+
 <b>Get All Posts</b>
 
 Fetch all posts with optional pagination support (limit and offset).
 
 Route: `GET /posts`
 
-<br>
+
 <b>Get User's Own Posts</b>
 
 Fetch all posts created by the currently authenticated user.
 
 Route: `GET /posts/user`
 
-<br>
+
 <b>Get Single Post</b>
 
 Fetch a single post by its ID.
 
 Route: `GET /posts/{post_id}`
 
-<br>
+
 <b>Update User's Own Post</b>
 
 Update a post created by the currently authenticated user.
 
 Route: `PUT /posts/{post_id}`
 
-<br>
+
 <b>Delete a Post</b>
 
 Delete a post created by the currently authenticated user.
 
 Route: `DELETE /posts/{post_id}`
 
-<br>
+
 <b>Like/Dislike a Post</b>
 
 Like or dislike a post made by other users.
 
 Route: `POST /posts/{post_id}/like`
 
-<br>
+
 <b>Unlike/Remove Like from a Post</b>
 
 Remove a previously liked or disliked post.
 
 Route: `DELETE /posts/{post_id}/like`
 
-<br>
+
 <b>Get Post Likes</b>
 
 Fetch all likes (and dislikes) for a specific post.
