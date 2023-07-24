@@ -150,7 +150,7 @@ Route: `GET /accounts/{post_id}/likes`
 When the containers are up, you can run the tests for the application by typing the following command in a new terminal:
 
 ```
-docker-compose exec app pytest
+docker exec <container name or id> pytest
 ```
 
 This will execute the pytest autotests suite, stored in <b>/tests</b> directory
