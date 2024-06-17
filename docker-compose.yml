@@ -13,7 +13,7 @@ services:
     image: postgres:latest
     restart: always
     ports:
-      - "5433:5432/tcp"
+      - "5434:5432/tcp"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
@@ -24,6 +24,6 @@ services:
     image: redis:latest
     restart: always
     ports:
-      - "6379:6379"
+      - "6380:6379"
 volumes:
   database_data:
